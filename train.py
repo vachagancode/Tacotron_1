@@ -7,9 +7,7 @@ from dataset import create_dataloaders
 from model import create_tacotron
 from config import get_config
 
-def train():
-    # TODO : Create a pre-trained model adding feature
-
+def train(m=None):
     # Setup the device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -18,15 +16,39 @@ def train():
 
     config = get_config()
 
+    start_epoch = 0
+
     # create the model
     tacotron = create_tacotron(cfg=config, device=device)
+    if m is not None:
+        data = torch.load(f=m, map_location=device)
+        model_state_dict = data["model_state_dict"]
+        optimizer_state_dict = data["optimizer_state_dict"]
+        scheduler_state_dict = data["scheduler_state_dict"]
+        
+        # Load model parameters
+        tacotron.load_state_dict(model_state_dict)
 
-    optimizer = torch.optim.Adam(tacotron.parameters(), lr=0.0001)
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
+        # Optimizer setup
+        optimizer = torch.optim.Adam(tacotron.parameters(), lr=0.0001)
+        optimizer.load_state_dict(optimizer_state_dict)
+
+        # Scheduler setup
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
+        scheduler_state_dict["total_steps"] = (train_dataloader)*config["epochs"] + scheduler_state_dict["total_steps"]
+        scheduler.load_state_dict(scheduler_state_dict)
+        
+        start_epoch = data["epoch"]
+
+    else:
+        optimizer = torch.optim.Adam(tacotron.parameters(), lr=0.0001)
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
+    
+    end_epoch = start_epoch + config["epoch"] # Train as much as specified
 
     loss_fn = torch.nn.L1Loss()
-    # Start the training
 
+    # Start the training
     prev_loss = float("inf")
     for epoch in range(config["epochs"]):
         print(f"Epoch: {epoch}")

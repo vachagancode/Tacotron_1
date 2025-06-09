@@ -189,4 +189,4 @@ if __name__ == "__main__":
     # train_dataloader, test_dataloader = create_dataloaders(annotations_file="data/metadata.csv", device=device, base_path="./data/")
     # print(dataset[51])
     # print(next(iter(train_dataloader)))
-    print(dataset[397])
+    print(dataset[397][2].shape)

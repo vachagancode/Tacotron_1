@@ -400,7 +400,7 @@ class Encoder(nn.Module):
         return x
 
 class Decoder(nn.Module):
-    def __init__(self, input_dim : int, hidden_dim : int, output_dim : int, encoder_dim : int, decoder_dim : int, attention_dim : int, mel_channels : int, dropout : float):
+    def __init__(self, input_dim : int, hidden_dim : int, output_dim : int, encoder_dim : int, decoder_dim : int, attention_dim : int, mel_channels : int, dropout : float, r : int = 5):
         super().__init__()
         """
             This is the Encoder block of the Tacotron 1.
@@ -420,6 +420,8 @@ class Decoder(nn.Module):
         self.attention_dim = attention_dim
         
         self.mel_channels = mel_channels
+
+        self.r = r
 
         self.decoder_pre_net = PreNet(
             input_dim=self.input_dim,
@@ -447,7 +449,7 @@ class Decoder(nn.Module):
 
         self.mel_out_proj = nn.Linear(
             in_features=self.hidden_dim,
-            out_features=self.mel_channels
+            out_features=self.mel_channels * self.r
         )
 
         self.stop_token_proj = nn.Linear(
@@ -463,7 +465,7 @@ class Decoder(nn.Module):
         
         return attention_weights
 
-    def forward(self, encoder_outputs, target_mels=None, max_decoder_steps=200,  stop_threashold = 0.5, r=5):
+    def forward(self, encoder_outputs, target_mels=None, max_decoder_steps=200,  stop_threashold = 0.5):
         batch_size = encoder_outputs.size(0)
         encoder_length = encoder_outputs.size(1)
         device = encoder_outputs.device
@@ -482,7 +484,7 @@ class Decoder(nn.Module):
         current_mel_input = self.go_frame.unsqueeze(0)
         current_mel_input = current_mel_input.expand(batch_size, -1)
         
-        for t in range(max_decoder_steps):
+        for t in range(max_decoder_steps // self.r):
 
             prenet_output = self.decoder_pre_net(current_mel_input)
 
@@ -513,7 +515,9 @@ class Decoder(nn.Module):
 
             # Predict mel frame
             current_mel_output = self.mel_out_proj(output)
-            mel_outputs.append(current_mel_output)
+            mel_output = current_mel_output.view(batch_size, self.r, self.mel_channels)
+            mel_outputs.append(mel_output)
+
 
             stop_token_logit = self.stop_token_proj(output)
             stop_token_outputs.append(stop_token_logit)
@@ -527,11 +531,14 @@ class Decoder(nn.Module):
             if target_mels is not None and t + 1 < target_mels.size(1):
                 current_mel_input = target_mels[:, t, :]
             else:
-                current_mel_input = current_mel_output
+                current_mel_input = mel_output[:, -1, :]
                 if target_mels is not None: # training mode but reached the end
                     break
 
-        mel_outputs = torch.stack(mel_outputs, dim=1)  # [B, num_frames, mel_channels]
+        # mel_outputs = torch.stack(mel_outputs, dim=1)  # [B, num_frames, mel_channels]
+        # mel_outputs = mel_outputs.view(mel_outputs.shape[0], mel_outputs.shape[1] * mel_outputs.shape[2], -1)
+        # print(mel_outputs.shape)
+        mel_outputs = torch.cat(mel_outputs, dim=1)
         attention_weights_history = torch.stack(attention_weights_history, dim=1)
         stop_token_outputs = torch.stack(stop_token_outputs, dim=1)
 
@@ -590,7 +597,7 @@ class Tacotron(nn.Module):
     def forward(self, x, y=None):
         encoder_outputs = self.encoder(x)
 
-        decoder_mel_outputs, attention_weights, stop_token_outputs = self.decoder(encoder_outputs=encoder_outputs, max_decoder_steps=y.shape[1], target_mels=y)
+        decoder_mel_outputs, attention_weights, stop_token_outputs = self.decoder(encoder_outputs=encoder_outputs, max_decoder_steps=y.shape[1] if y is not None else 200, target_mels=y)
         # decoder_mel_outputs = decoder_mel_outputs.transpose(1, 2)
         pp_cbhg_output = self.post_processing_cbhg(decoder_mel_outputs)
 
@@ -610,7 +617,7 @@ if __name__ == "__main__":
 
     # # embedding = CharacterEmbeddings(10, 256, torch.device("cpu"))
     # # pre_net = PreNet(256, 128, 128, 0.5)
-    # x = torch.zeros(size=(10,), dtype=torch.long)
+    x = torch.zeros(size=(10,), dtype=torch.long)
     # print(x.shape)
     # # print(x.shape)
     # # x = embedding(x)
@@ -671,9 +678,12 @@ if __name__ == "__main__":
     cfg = get_config()
 
     tacotron = create_tacotron(cfg, device)
-    x =  x.unsqueeze(0)
-    spectrogram = tacotron(x)["linear_outputs"].squeeze(0)
-    print(spectrogram)
+    # print(x)
+    x = x.unsqueeze(0)
+    spectrogram = tacotron(x=x, y=None)["linear_outputs"].squeeze(0)
+
+    # print(spectrogram)
+
     # spectrogram = torch.abs(spectrogram) + 1e-8
     
     # plt.figure(figsize=(10, 4))
@@ -681,13 +691,16 @@ if __name__ == "__main__":
     # plt.show()
     
     waveform = griffin_lim_transform(spectrogram.detach().T)
-    print(waveform)
+
+    # print(waveform)
+
     obj = wave.open("output.wav", "w")
     obj.setnchannels(1)  # Mono audio
     obj.setsampwidth(2)   # 16-bit audio
-    obj.setframerate(44100)  # 44100 Hz sample rate
+    obj.setframerate(22050)  # 44100 Hz sample rate
     obj.writeframesraw(waveform.numpy().tobytes())
     obj.close()
 
-    print(waveform)
-    ipd.Audio(waveform, rate=44100)
+    # print(waveform)
+
+    ipd.Audio(waveform, rate=22050)
