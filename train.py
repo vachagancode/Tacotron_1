@@ -44,7 +44,7 @@ def train(m=None):
         optimizer = torch.optim.Adam(tacotron.parameters(), lr=0.0001)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
     
-    end_epoch = start_epoch + config["epoch"] # Train as much as specified
+    end_epoch = start_epoch + config["epochs"] # Train as much as specified
 
     loss_fn = torch.nn.L1Loss()
 
