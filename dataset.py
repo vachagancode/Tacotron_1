@@ -94,7 +94,7 @@ class TacotronDataset(Dataset):
 
     def __getitem__(self, idx):
         audio_name = f"{self.df['name'].iloc[idx]}.wav"
-        formatted_text = self.df['ftext'].iloc[idx] if self.df['ftext'].iloc[idx] else self.df['text'].iloc[idx]
+        formatted_text = self.df['ftext'].iloc[idx] if not isinstance(self.df['ftext'].iloc[idx], float) else self.df['text'].iloc[idx]
 
         tokenized_text = torch.tensor(tokenize_data(formatted_text))
 
@@ -163,7 +163,7 @@ def collate_data(batch):
 def create_dataloaders(annotations_file, device, base_path):
     dataset = TacotronDataset(annotations_file, device, base_path)
 
-    train_data, test_data = torch.utils.data.random_split(dataset, [0.999, 0.001])
+    train_data, test_data = torch.utils.data.random_split(dataset, [0.8, 0.2])
 
     train_dataloader = DataLoader(
         dataset=train_data,
