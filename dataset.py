@@ -9,7 +9,7 @@ _pad = '_'
 _eos = '~' # End of sequence token
 _punctuation = '!\'(),-.:;?[]" ' # Common punctuation
 _alphabets = 'abcdefghijklmnopqrstuvwxyz' # Lowercase alphabets
-_all_chars = list(_pad) + list(_eos) + list(_punctuation) + list(_alphabets)
+_all_chars = ['p', 'r', 'i', 'n', 't', 'g', ',', ' ', 'h', 'e', 'o', 'l', 'y', 's', 'w', 'c', 'a', 'd', 'f', 'm', 'x', 'b', 'v', '.', 'u', 'k', 'j', '"', '-', ';', '(', 'z', ')', ':', "'", 'q', '!', '?', '|', 'â', 'é', 'à', 'ê', 'ü', 'è', '“', '”', '’', '[', ']']
 char2id = {char: i for i, char in enumerate(_all_chars)}
 id2char = {i: char for i, char in enumerate(_all_chars)}
 def tokenize_data(text):
@@ -58,6 +58,22 @@ class TacotronDataset(Dataset):
         elif waveform.shape[-1] > self.target_size:
             return waveform[:, :self.target_size]
 
+    def _get_all_characters(self):
+        chars = []
+        for i in range(len(self.df)):
+            print(i)
+            print(self.df["ftext"].iloc[i])
+            if not isinstance(self.df["ftext"].iloc[i], float):
+                for t in self.df["ftext"].iloc[i]:
+                    if t.lower() not in chars:
+                        chars.append(t.lower())
+            else:
+                for t in self.df["text"].iloc[i]:
+                    if t.lower() not in chars:
+                        chars.append(t.lower())
+        
+        return chars, len(chars)
+
     def _calculate_average_target_size(self):
         i = 0
         s = 0
@@ -77,7 +93,7 @@ class TacotronDataset(Dataset):
 
     def __getitem__(self, idx):
         audio_name = f"{self.df['name'].iloc[idx]}.wav"
-        formatted_text = self.df['ftext'].iloc[idx]
+        formatted_text = self.df['ftext'].iloc[idx] if self.df['ftext'].iloc[idx] else self.df['text'].iloc[idx]
 
         tokenized_text = torch.tensor(tokenize_data(formatted_text))
 
@@ -172,4 +188,4 @@ if __name__ == "__main__":
     # train_dataloader, test_dataloader = create_dataloaders(annotations_file="data/metadata.csv", device=device, base_path="./data/")
     # print(dataset[51])
     # print(next(iter(train_dataloader)))
-    print(dataset._get_all_characters())
+    print(dataset[397])
