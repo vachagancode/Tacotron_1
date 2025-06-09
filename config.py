@@ -1,7 +1,7 @@
 def get_config():
     return {
         "encoder" : {
-            "vocab_size" : 50,
+            "vocab_size" : 52,
             "embedding_dim" : 256,
             "hidden_dim" : 128,
             "output_dim" : 128,

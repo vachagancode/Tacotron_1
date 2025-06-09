@@ -35,7 +35,7 @@ def train():
         step = 0
         print("-----------------------------------")
         print(f"Training Loop | Epoch: {epoch}")
-        batch_loader = tqdm(train_dataloader)
+        batch_loader = tqdm(test_dataloader)
         for batch in batch_loader:
             tacotron.train()
 
