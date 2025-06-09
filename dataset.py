@@ -10,6 +10,7 @@ _eos = '~' # End of sequence token
 _punctuation = '!\'(),-.:;?[]" ' # Common punctuation
 _alphabets = 'abcdefghijklmnopqrstuvwxyz' # Lowercase alphabets
 _all_chars = ['p', 'r', 'i', 'n', 't', 'g', ',', ' ', 'h', 'e', 'o', 'l', 'y', 's', 'w', 'c', 'a', 'd', 'f', 'm', 'x', 'b', 'v', '.', 'u', 'k', 'j', '"', '-', ';', '(', 'z', ')', ':', "'", 'q', '!', '?', '|', 'â', 'é', 'à', 'ê', 'ü', 'è', '“', '”', '’', '[', ']']
+_all_chars += list(_pad) + list(_eos) + list(_punctuation)
 char2id = {char: i for i, char in enumerate(_all_chars)}
 id2char = {i: char for i, char in enumerate(_all_chars)}
 def tokenize_data(text):
