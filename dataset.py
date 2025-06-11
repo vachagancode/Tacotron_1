@@ -1,7 +1,9 @@
 import os
 import torch
 import torchaudio
+
 from torch.utils.data import Dataset, DataLoader
+from torch.nn.utils.rnn import pad_sequence
 
 import pandas as pd
 
@@ -111,17 +113,22 @@ class TacotronDataset(Dataset):
         mel_spectrogram = self.amp_to_db(mel_spectrogram)
 
         spectrogram = self.spec_transform(waveform).squeeze(0)
-        # print(mel_spectrogram.shape)
-        # print(waveform.shape)
-        # print(waveform)
+
+        # Stop token target tensor
+        mspec_length  = torch.tensor(mel_spectrogram.shape[-1]) # get the length of time steps
+        r = 5
+
+        target_stop_token = torch.zeros(int(torch.ceil(mspec_length / r).item()))
+        true_length_index = (mspec_length - 1) // r
+        target_stop_token[true_length_index] = 1.0
         
-        return spectrogram, mel_spectrogram, tokenized_text
+        return spectrogram, mel_spectrogram, tokenized_text, target_stop_token, mspec_length
 
     def __len__(self):
         return len(self.df)
     
 def collate_data(batch):
-    spectrograms, mel_spectrograms, text_sequences = zip(*batch)
+    spectrograms, mel_spectrograms, text_sequences, target_stop_token, mspec_length = zip(*batch)
 
     # Text padding
     text_lengths = torch.tensor([len(text) for text in text_sequences], dtype=torch.long)
@@ -158,7 +165,12 @@ def collate_data(batch):
     for i, spec in enumerate(spectrograms):
         padded_spectrograms[i, :, :spec.shape[-1]] = spec
 
-    return {"spectrogram" : padded_spectrograms,"mel_spectrogram": padded_mel_spectrograms, "text": padded_text_sequences}
+    # Pad the target stop token
+    padded_target_stop_tokens = pad_sequence(target_stop_token, batch_first=True, padding_value=0.0)
+    padded_target_stop_tokens = padded_target_stop_tokens.unsqueeze(-1)
+
+    print(padded_mel_spectrograms.shape)
+    return {"spectrogram" : padded_spectrograms,"mel_spectrogram": padded_mel_spectrograms, "text": padded_text_sequences, "target_stop_token": padded_target_stop_tokens, "mspec_length": mspec_length}
 
 def create_dataloaders(annotations_file, device, base_path):
     dataset = TacotronDataset(annotations_file, device, base_path)
@@ -186,7 +198,7 @@ def create_dataloaders(annotations_file, device, base_path):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset = TacotronDataset(annotations_file="data/metadata.csv", device=device, base_path="./data/")
-    # train_dataloader, test_dataloader = create_dataloaders(annotations_file="data/metadata.csv", device=device, base_path="./data/")
+    train_dataloader, test_dataloader = create_dataloaders(annotations_file="data/metadata.csv", device=device, base_path="./data/")
     # print(dataset[51])
-    # print(next(iter(train_dataloader)))
-    print(dataset[397][2].shape)
+    print(next(iter(train_dataloader)))
+    # print(dataset[397][2].shape)

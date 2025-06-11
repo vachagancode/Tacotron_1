@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F 
 
 import math
 from tqdm import tqdm
@@ -6,6 +7,21 @@ from tqdm import tqdm
 from dataset import create_dataloaders
 from model import create_tacotron
 from config import get_config
+
+def prepare_spectrogram(mel_spectrograms, r, device, pad_value=-100.0):
+    # Calculate the padding value
+    pad_size = (r - mel_spectrograms.shape[1]) % r
+
+    if pad_size > 0:
+        padded_mel_spectrograms = F.pad(
+            mel_spectrograms, mode='constant', value=pad_value,
+            pad=(0, 0, 0, pad_size)
+        )
+
+        return padded_mel_spectrograms.to(device)
+    else: # no need for padding
+        return mel_spectrograms.to(device)
+    
 
 def train(m=None):
     # Setup the device
@@ -35,7 +51,6 @@ def train(m=None):
 
         # Scheduler setup
         scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.001, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
-        scheduler_state_dict["total_steps"] = (train_dataloader)*config["epochs"] + scheduler_state_dict["total_steps"]
         scheduler.load_state_dict(scheduler_state_dict)
         
         start_epoch = data["epoch"]
@@ -47,10 +62,11 @@ def train(m=None):
     end_epoch = start_epoch + config["epochs"] # Train as much as specified
 
     loss_fn = torch.nn.L1Loss()
+    loss_fn_stop_token = torch.nn.BCEWithLogitsLoss()
 
     # Start the training
     prev_loss = float("inf")
-    for epoch in range(config["epochs"]):
+    for epoch in range(start_epoch, end_epoch):
         print(f"Epoch: {epoch}")
         train_loss = 0
         test_loss = 0
@@ -64,19 +80,27 @@ def train(m=None):
             spectrograms = batch["spectrogram"].to(device)
             mel_spectrograms = batch["mel_spectrogram"].to(device)
             texts = batch["text"].to(device)
+            target_stop_tokens = batch["target_stop_token"].to(device)
+
+            # prepare mel spectrogram for loss calculation
+            mel_spectrograms = mel_spectrograms.transpose(1, 2)
+            mel_spectrograms = prepare_spectrogram(mel_spectrograms, r=5, device=device)
+
+            spectrograms = spectrograms.transpose(1, 2)
+            spectrograms = prepare_spectrogram(spectrograms, r=5, device=device, pad_value=0.001)
 
             # Forward pass
-            mel_spectrograms = mel_spectrograms.transpose(1, 2)
-            spectrograms = spectrograms.transpose(1, 2)
-
             model_output = tacotron(x=texts, y=mel_spectrograms)
             
-            # Calculate the los
-            mel_loss = loss_fn(model_output["mel_outputs"], mel_spectrograms)
+            # Calculate the loss
+            min_len = min(mel_spectrograms.shape[1], model_output["mel_outputs"].shape[1])
+            mel_loss = loss_fn(model_output["mel_outputs"][:, :min_len, :], mel_spectrograms[:, :min_len, :])
             lin_loss = loss_fn(model_output["linear_outputs"], spectrograms)
 
-            total_loss = lin_loss + mel_loss
 
+            stop_token_loss = loss_fn_stop_token(model_output["stop_token_outputs"], target_stop_tokens)
+
+            total_loss = lin_loss + mel_loss + stop_token_loss
             batch_loader.set_postfix({f"Loss": f"{total_loss}"})
 
             train_loss += total_loss
@@ -86,7 +110,6 @@ def train(m=None):
 
             # Loss backward
             total_loss.backward()
-            
             # Optimizer step
             optimizer.step()
 
@@ -110,7 +133,10 @@ def train(m=None):
                     test_spectrograms = test_batch["spectrogram"].to(device)
 
                     test_mel_spectrograms = test_mel_spectrograms.transpose(1, 2)
+                    test_mel_spectrograms = prepare_spectrogram(test_mel_spectrograms, r=5, device=device)
+
                     test_spectrograms = test_spectrograms.transpose(1, 2)
+                    test_spectrograms = prepare_spectrogram(test_spectrograms, r=5, device=device, pad_value=0.001)
                     # Do the forward pass
                     test_model_output = tacotron(x=test_texts, y=test_mel_spectrograms)
 
@@ -144,5 +170,6 @@ def train(m=None):
                 )
             
     return tacotron
+
 if __name__ == "__main__":
     train()

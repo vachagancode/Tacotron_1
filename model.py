@@ -454,13 +454,13 @@ class Decoder(nn.Module):
 
         self.stop_token_proj = nn.Linear(
             in_features=self.hidden_dim,
-            out_features=self.mel_channels
+            out_features=1
         )
 
         self.go_frame = nn.Parameter(torch.zeros(self.mel_channels))
 
     def init_attention_weights(self, batch_size, encoder_length, device):
-        attention_weights = torch.ones(batch_size, encoder_length, device=device)
+        attention_weights = torch.zeros(batch_size, encoder_length, device=device)
         attention_weights[:, 0] = 1.0 # Focus entierly on the first position
         
         return attention_weights
@@ -479,6 +479,8 @@ class Decoder(nn.Module):
         mel_outputs = []
         attention_weights_history = []
         stop_token_outputs = []
+
+        finished_sequences = torch.zeros(batch_size, dtype=torch.bool)
         
         # Initial input to decoder's PreNet
         current_mel_input = self.go_frame.unsqueeze(0)
@@ -514,22 +516,26 @@ class Decoder(nn.Module):
             )
 
             # Predict mel frame
-            current_mel_output = self.mel_out_proj(output)
+            current_mel_output = self.mel_out_proj(output)  # [batch_size, mel_channels * reduction_factor]
             mel_output = current_mel_output.view(batch_size, self.r, self.mel_channels)
+
             mel_outputs.append(mel_output)
 
 
-            stop_token_logit = self.stop_token_proj(output)
-            stop_token_outputs.append(stop_token_logit)
+            stop_token_logits = self.stop_token_proj(output)
+            stop_token_outputs.append(stop_token_logits)
             
-            if target_mels is None: # this means inference mode
-                stop_prob = torch.sigmoid(stop_token_logit)
-                if torch.all(stop_prob > stop_threashold):
+            if target_mels is None: # inference mode
+                stop_prob = torch.sigmoid(stop_token_logits)
+                for i in range(batch_size):
+                    if stop_prob[i] > stop_threashold:
+                        finished_sequences[i] = True
+
+                if torch.all(finished_sequences):
                     break
 
-
-            if target_mels is not None and t + 1 < target_mels.size(1):
-                current_mel_input = target_mels[:, t, :]
+            if target_mels is not None and self.r * (t + 1) - 1 < target_mels.size(1):
+                current_mel_input = target_mels[:, self.r * (t + 1) - 1, :]
             else:
                 current_mel_input = mel_output[:, -1, :]
                 if target_mels is not None: # training mode but reached the end
