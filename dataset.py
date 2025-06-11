@@ -169,7 +169,6 @@ def collate_data(batch):
     padded_target_stop_tokens = pad_sequence(target_stop_token, batch_first=True, padding_value=0.0)
     padded_target_stop_tokens = padded_target_stop_tokens.unsqueeze(-1)
 
-    print(padded_mel_spectrograms.shape)
     return {"spectrogram" : padded_spectrograms,"mel_spectrogram": padded_mel_spectrograms, "text": padded_text_sequences, "target_stop_token": padded_target_stop_tokens, "mspec_length": mspec_length}
 
 def create_dataloaders(annotations_file, device, base_path):
