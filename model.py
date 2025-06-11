@@ -400,7 +400,7 @@ class Encoder(nn.Module):
         return x
 
 class Decoder(nn.Module):
-    def __init__(self, input_dim : int, hidden_dim : int, output_dim : int, encoder_dim : int, decoder_dim : int, attention_dim : int, mel_channels : int, dropout : float, r : int = 5):
+    def __init__(self, input_dim : int, hidden_dim : int, output_dim : int, encoder_dim : int, decoder_dim : int, attention_dim : int, mel_channels : int, dropout : float, r : int = 3):
         super().__init__()
         """
             This is the Encoder block of the Tacotron 1.
