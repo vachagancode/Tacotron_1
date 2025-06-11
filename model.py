@@ -683,7 +683,10 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     cfg = get_config()
 
+    data = torch.load(f="./models/me18l6.pth", map_location=device, weights_only=True)
+
     tacotron = create_tacotron(cfg, device)
+    tacotron.load_state_dict(data["model_state_dict"])
     # print(x)
     x = x.unsqueeze(0)
     spectrogram = tacotron(x=x, y=None)["linear_outputs"].squeeze(0)
