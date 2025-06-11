@@ -116,7 +116,7 @@ class TacotronDataset(Dataset):
 
         # Stop token target tensor
         mspec_length  = torch.tensor(mel_spectrogram.shape[-1]) # get the length of time steps
-        r = 5
+        r = 3
 
         target_stop_token = torch.zeros(int(torch.ceil(mspec_length / r).item()))
         true_length_index = (mspec_length - 1) // r
