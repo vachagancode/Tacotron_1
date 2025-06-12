@@ -84,10 +84,10 @@ def train(m=None):
 
             # prepare mel spectrogram for loss calculation
             mel_spectrograms = mel_spectrograms.transpose(1, 2)
-            mel_spectrograms = prepare_spectrogram(mel_spectrograms, r=3, device=device)
+            mel_spectrograms = prepare_spectrogram(mel_spectrograms, r=5, device=device)
 
             spectrograms = spectrograms.transpose(1, 2)
-            spectrograms = prepare_spectrogram(spectrograms, r=3, device=device, pad_value=0.001)
+            spectrograms = prepare_spectrogram(spectrograms, r=5, device=device, pad_value=0.001)
 
             # Forward pass
             model_output = tacotron(x=texts, y=mel_spectrograms)
@@ -133,10 +133,10 @@ def train(m=None):
                     test_spectrograms = test_batch["spectrogram"].to(device)
 
                     test_mel_spectrograms = test_mel_spectrograms.transpose(1, 2)
-                    test_mel_spectrograms = prepare_spectrogram(test_mel_spectrograms, r=3, device=device)
+                    test_mel_spectrograms = prepare_spectrogram(test_mel_spectrograms, r=5, device=device)
 
                     test_spectrograms = test_spectrograms.transpose(1, 2)
-                    test_spectrograms = prepare_spectrogram(test_spectrograms, r=3, device=device, pad_value=0.001)
+                    test_spectrograms = prepare_spectrogram(test_spectrograms, r=5, device=device, pad_value=0.001)
                     # Do the forward pass
                     test_model_output = tacotron(x=test_texts, y=test_mel_spectrograms)
 
