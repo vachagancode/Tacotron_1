@@ -46,18 +46,18 @@ def train(m=None):
         tacotron.load_state_dict(model_state_dict)
 
         # Optimizer setup
-        optimizer = torch.optim.Adam(tacotron.parameters(), lr=0.001)
+        optimizer = torch.optim.Adam(tacotron.parameters(), lr=5e-5)
         optimizer.load_state_dict(optimizer_state_dict)
 
         # Scheduler setup
-        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.01, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.0005, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
         scheduler.load_state_dict(scheduler_state_dict)
         
         start_epoch = data["epoch"]
 
     else:
-        optimizer = torch.optim.Adam(tacotron.parameters(), lr=0.001)
-        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.01, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
+        optimizer = torch.optim.Adam(tacotron.parameters(), lr=5e-5)
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=2e-4, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35, anneal_strategy='cos', div_factor=25, final_div_factor=100)
     
     end_epoch = start_epoch + config["epochs"] # Train as much as specified
 
@@ -110,7 +110,9 @@ def train(m=None):
 
             # Loss backward
             total_loss.backward()
+            
             # Optimizer step
+            torch.nn.utils.clip_grad_norm_(tacotron.parameters(), max_norm=1.0) # Or another suitable value
             optimizer.step()
 
             # Scheduler step
