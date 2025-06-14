@@ -122,6 +122,7 @@ def train(m=None):
             step += 1
 
         train_loss /= step
+        print(f"Train Loss: {train_loss}")
         
         if epoch % 2 == 0:
             # Do the inference
@@ -129,10 +130,12 @@ def train(m=None):
             tacotron.eval()
             with torch.inference_mode():
                 print(f"Testing Loop | Epoch: {epoch}")
-                for test_batch in tqdm(test_dataloader):
+                test_batch_loader = tqdm(test_dataloader)
+                for test_batch in test_batch_loader:
                     test_mel_spectrograms = test_batch["mel_spectrogram"].to(device)
                     test_texts = test_batch["text"].to(device)
                     test_spectrograms = test_batch["spectrogram"].to(device)
+                    test_target_stop_tokens = test_batch["target_stop_token"].to(device)
 
                     test_mel_spectrograms = test_mel_spectrograms.transpose(1, 2)
                     test_mel_spectrograms = prepare_spectrogram(test_mel_spectrograms, r=5, device=device)
@@ -145,16 +148,20 @@ def train(m=None):
                     # Calculate the loss
                     t_mel_loss = loss_fn(test_model_output["mel_outputs"], test_mel_spectrograms)
                     t_lin_loss = loss_fn(test_model_output["linear_outputs"], test_spectrograms)
+                    t_stop_token_loss = loss_fn_stop_token(test_model_output["stop_token_outputs"], test_target_stop_tokens)
 
-                    t_total_loss = t_mel_loss + t_lin_loss
+                    t_total_loss = t_mel_loss + t_lin_loss + t_stop_token_loss
+
+                    test_batch_loader.set_postfix({f"Loss": f"{t_total_loss}"})
 
                     test_loss += t_total_loss
 
                     step += 1
             
                 test_loss /= step
+                print(f"Test Loss: {test_loss}")
 
-            # Save the model 
+            # Save the model
             if train_loss < prev_loss:
                 prev_loss = train_loss
                 model_name = f"me{epoch}l{math.floor(train_loss)}.pth"

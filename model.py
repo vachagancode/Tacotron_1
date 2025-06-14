@@ -465,7 +465,7 @@ class Decoder(nn.Module):
         
         return attention_weights
 
-    def forward(self, encoder_outputs, target_mels=None, max_decoder_steps=200,  stop_threashold = 0.5):
+    def forward(self, encoder_outputs, target_mels=None, max_decoder_steps=1000,  stop_threashold = 0.5):
         batch_size = encoder_outputs.size(0)
         encoder_length = encoder_outputs.size(1)
         device = encoder_outputs.device
