@@ -603,7 +603,7 @@ class Tacotron(nn.Module):
     def forward(self, x, y=None):
         encoder_outputs = self.encoder(x)
 
-        decoder_mel_outputs, attention_weights, stop_token_outputs = self.decoder(encoder_outputs=encoder_outputs, max_decoder_steps=y.shape[1] if y is not None else 200, target_mels=y)
+        decoder_mel_outputs, attention_weights, stop_token_outputs = self.decoder(encoder_outputs=encoder_outputs, max_decoder_steps=y.shape[1] if y is not None else 1000, target_mels=y)
         # decoder_mel_outputs = decoder_mel_outputs.transpose(1, 2)
         pp_cbhg_output = self.post_processing_cbhg(decoder_mel_outputs)
 
