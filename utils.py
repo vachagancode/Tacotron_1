@@ -1,7 +1,9 @@
 import torch
+from torchaudio.transforms import GriffinLim
 import librosa.display
 import numpy as np
 import matplotlib.pyplot as plt
+import wave
 
 from dataset import tokenize_data, _all_chars
 from model import create_tacotron
@@ -39,11 +41,27 @@ def plot_spectrogram(spectrogram, spec_type='linear'):
     spectrogram = spectrogram.detach().cpu().numpy()
 
     fig, ax = plt.subplots()
-    img = librosa.display.specshow(spectrogram, x_axis='time', y_axis='linear' if spec_type == 'linear' else 'log', ax=ax, n_fft=1024)
+    img = librosa.display.specshow(spectrogram, x_axis='time', y_axis='linear' if spec_type == 'linear' else spec_type, ax=ax, n_fft=1024)
     ax.set(title=f"{'Mel-' if spec_type == 'log' else ''}Spectrogram generated")
     fig.colorbar(img, ax=ax, format='%+2.f dB')
 
     plt.show()
+
+def apply_griffin_lim(spectrogram):
+    spectrogram = spectrogram.squeeze(0).T
+    griffin_lim_transform = GriffinLim(n_fft=1024, power=1)
+
+    return griffin_lim_transform(spectrogram)
+
+def save_waveform(waveform, sample_rate = 22050, n_channels = 1):
+    with wave.open("./output.wav", 'wb') as wf:
+        wf.setnchannels(n_channels)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframesraw(waveform.numpy().tobytes())
+        wf.close()
+
+    print("Output saved successfully !")
 
 
 if __name__ == "__main__":
@@ -59,5 +77,7 @@ if __name__ == "__main__":
     input_text = "Hello !"
 
     predicted_outputs = predict_spectrogram(tacotron, input_text, device=device)
-    # Plot a spectrogram
-    plot_spectrogram(predicted_outputs["mel_spectrogram"].squeeze(0).transpose(0, 1), spec_type='log')
+    
+    waveform = apply_griffin_lim(predicted_outputs["linear_spectrogram"].squeeze(0).T)
+
+    save_waveform(waveform)
