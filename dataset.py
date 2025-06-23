@@ -182,7 +182,6 @@ def create_dataloaders(annotations_file, device, base_path):
         batch_size=8,
         pin_memory=True,
         collate_fn=collate_data,
-        num_workers=os.cpu_count()
     )
 
     test_dataloader = DataLoader(
@@ -191,7 +190,6 @@ def create_dataloaders(annotations_file, device, base_path):
         batch_size=8,
         pin_memory=True,
         collate_fn=collate_data,
-        num_workers=os.cpu_count()
     )
 
     return train_dataloader, test_dataloader
