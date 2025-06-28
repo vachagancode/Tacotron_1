@@ -49,9 +49,13 @@ def train(m=None):
         optimizer = torch.optim.Adam(tacotron.parameters(), lr=5e-5)
         optimizer.load_state_dict(optimizer_state_dict)
 
+        current_lr = optimizer.param_groups[0]['lr']
+
         # Scheduler setup
-        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.0005, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
-        scheduler.load_state_dict(scheduler_state_dict)
+        total_steps = config["epochs"] * len(train_dataloader)
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=current_lr * 0.75, total_steps=total_steps, pct_start=0.35)
+        # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.0005, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
+        # scheduler.load_state_dict(scheduler_state_dict)
         
         start_epoch = data["epoch"]
 
@@ -123,7 +127,6 @@ def train(m=None):
 
         train_loss /= step
         print(f"Train Loss: {train_loss}")
-        
         if epoch % 2 == 0:
             # Do the inference
             step = 0

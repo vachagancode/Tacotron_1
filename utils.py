@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     config = get_config()
     # Load model data
-    data = torch.load("./me34l6.pth", map_location=device)
+    data = torch.load("./me114l4.pth", map_location=device)
 
     tacotron = create_tacotron(config, device)
     tacotron.load_state_dict(data["model_state_dict"])
@@ -78,6 +78,6 @@ if __name__ == "__main__":
 
     predicted_outputs = predict_spectrogram(tacotron, input_text, device=device)
     
-    waveform = apply_griffin_lim(predicted_outputs["linear_spectrogram"].squeeze(0).T)
+    waveform = apply_griffin_lim(predicted_outputs["linear_spectrogram"].squeeze(0))
 
     save_waveform(waveform)
