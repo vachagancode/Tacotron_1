@@ -55,7 +55,7 @@ def train(m=None):
         total_steps = config["epochs"] * len(train_dataloader)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=current_lr * 0.75, total_steps=total_steps, pct_start=0.35)
         # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.0005, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
-        # scheduler.load_state_dict(scheduler_state_dict)
+        scheduler.load_state_dict(scheduler_state_dict)
         
         start_epoch = data["epoch"]
 
