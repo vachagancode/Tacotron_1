@@ -36,5 +36,5 @@ def get_config():
             "proj_hidden_1" : 256
         },
         "n_fft" : 1024,
-        "epochs": 1500
+        "epochs": 300
     }

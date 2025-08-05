@@ -174,12 +174,20 @@ def collate_data(batch):
 def create_dataloaders(annotations_file, device, base_path):
     dataset = TacotronDataset(annotations_file, device, base_path)
 
-    train_data, test_data = torch.utils.data.random_split(dataset, [0.8, 0.2])
+    train_data, valid_data, test_data = torch.utils.data.random_split(dataset, [0.8, 0.1, 0.1])
 
     train_dataloader = DataLoader(
         dataset=train_data,
         shuffle=True,
-        batch_size=8,
+        batch_size=4,
+        pin_memory=True,
+        collate_fn=collate_data,
+    )
+
+    valid_dataloader = DataLoader(
+        dataset=valid_data,
+        shuffle=False,
+        batch_size=4,
         pin_memory=True,
         collate_fn=collate_data,
     )
@@ -187,12 +195,12 @@ def create_dataloaders(annotations_file, device, base_path):
     test_dataloader = DataLoader(
         dataset=test_data,
         shuffle=False,
-        batch_size=8,
+        batch_size=4,
         pin_memory=True,
         collate_fn=collate_data,
     )
 
-    return train_dataloader, test_dataloader
+    return train_dataloader, valid_dataloader, test_dataloader
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

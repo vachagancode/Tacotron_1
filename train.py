@@ -28,7 +28,7 @@ def train(m=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create the dataloaders
-    train_dataloader, test_dataloader = create_dataloaders(annotations_file="data/metadata.csv", device=device, base_path="./data/")
+    train_dataloader, valid_dataloader, test_dataloader = create_dataloaders(annotations_file="data/metadata.csv", device=device, base_path="./data/")
 
     config = get_config()
 
@@ -77,7 +77,8 @@ def train(m=None):
         step = 0
         print("-----------------------------------")
         print(f"Training Loop | Epoch: {epoch}")
-        batch_loader = tqdm(train_dataloader)
+        # batch_loader = tqdm(train_dataloader) # ! Changed for simple training
+        batch_loader = tqdm(valid_dataloader)
         for batch in batch_loader:
             tacotron.train()
 
