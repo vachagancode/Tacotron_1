@@ -46,7 +46,7 @@ def train(m=None):
         tacotron.load_state_dict(model_state_dict)
 
         # Optimizer setup
-        optimizer = torch.optim.Adam(tacotron.parameters(), lr=5e-5)
+        optimizer = torch.optim.Adam(tacotron.parameters(), lr=5e-4)
         optimizer.load_state_dict(optimizer_state_dict)
 
         current_lr = optimizer.param_groups[0]['lr']
@@ -59,7 +59,7 @@ def train(m=None):
         start_epoch = data["epoch"]
 
     else:
-        optimizer = torch.optim.Adam(tacotron.parameters(), lr=5e-5)
+        optimizer = torch.optim.Adam(tacotron.parameters(), lr=5e-4)
         # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=2e-4, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35, anneal_strategy='cos', div_factor=25, final_div_factor=100)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.75, patience=2)
     end_epoch = start_epoch + config["epochs"] # Train as much as specified
