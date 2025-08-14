@@ -119,12 +119,12 @@ def train(m=None):
             optimizer.step()
 
             # Scheduler step
-            scheduler.step()
 
             # Update the step
             step += 1
 
         train_loss /= step
+        scheduler.step(train_loss)
         print(f"Train Loss: {train_loss}")
         if epoch % 2 == 0:
             # Do the inference
