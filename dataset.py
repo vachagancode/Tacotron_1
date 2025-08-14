@@ -174,7 +174,7 @@ def collate_data(batch):
 def create_dataloaders(annotations_file, device, base_path):
     dataset = TacotronDataset(annotations_file, device, base_path)
 
-    train_data, valid_data, test_data = torch.utils.data.random_split(dataset, [0.8, 0.1, 0.1])
+    train_data, valid_data, test_data = torch.utils.data.random_split(dataset, [0.4, 0.2, 0.4])
 
     train_dataloader = DataLoader(
         dataset=train_data,

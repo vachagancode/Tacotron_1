@@ -53,16 +53,15 @@ def train(m=None):
 
         # Scheduler setup
         total_steps = config["epochs"] * len(train_dataloader)
-        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=current_lr * 0.75, total_steps=total_steps, pct_start=0.35)
-        # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.0005, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.75, patience=2)
         scheduler.load_state_dict(scheduler_state_dict)
         
         start_epoch = data["epoch"]
 
     else:
         optimizer = torch.optim.Adam(tacotron.parameters(), lr=5e-5)
-        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=2e-4, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35, anneal_strategy='cos', div_factor=25, final_div_factor=100)
-    
+        # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=2e-4, total_steps=len(train_dataloader)*config["epochs"], pct_start=0.35, anneal_strategy='cos', div_factor=25, final_div_factor=100)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.75, patience=2)
     end_epoch = start_epoch + config["epochs"] # Train as much as specified
 
     loss_fn = torch.nn.L1Loss()
@@ -77,8 +76,7 @@ def train(m=None):
         step = 0
         print("-----------------------------------")
         print(f"Training Loop | Epoch: {epoch}")
-        # batch_loader = tqdm(train_dataloader) # ! Changed for simple training
-        batch_loader = tqdm(valid_dataloader)
+        batch_loader = tqdm(train_dataloader)
         for batch in batch_loader:
             tacotron.train()
 
@@ -134,7 +132,7 @@ def train(m=None):
             tacotron.eval()
             with torch.inference_mode():
                 print(f"Testing Loop | Epoch: {epoch}")
-                test_batch_loader = tqdm(test_dataloader)
+                test_batch_loader = tqdm(valid_dataloader)
                 for test_batch in test_batch_loader:
                     test_mel_spectrograms = test_batch["mel_spectrogram"].to(device)
                     test_texts = test_batch["text"].to(device)
